@@ -1,0 +1,1 @@
+pyinstaller --clean -y -n "GCodeInfo" --noconsole --add-data "icon.png;." --add-data "gci.ui;." -i "icon.ico" script.py
