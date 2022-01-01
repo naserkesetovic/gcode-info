@@ -2,11 +2,15 @@
 #
 # Naser Kesetovic
 # naser.kesetovic@amm.ba
-# 2021/12/25
+# 2021/12/24
 #
 # TODO: Add print finished from current timedate
 # TODO: Thumnail size based upon the size from comment 
-# TODO: Add compressing of base64? >>  https://stackoverflow.com/questions/55369929/how-do-i-compress-base64-data-using-stringio-into-a-buffer
+# TODO: Raw values from profile_data
+# TODO: Add compressing of base64
+
+#
+# https://stackoverflow.com/questions/55369929/how-do-i-compress-base64-data-using-stringio-into-a-buffer
 #
 
 
@@ -124,14 +128,14 @@ class gcode_info(QMainWindow):
                
             else:
                 self.gThumbnail.setHidden(True)
-                self.gMachine.setGeometry(QRect(10, 430, 291, 101))
-                self.setFixedSize(312, 541)
+                self.gMachine.setGeometry(QRect(10, 409, 291, 101))
+                self.setFixedSize(312, 521)
 
             try:
                 profile_data = json.loads(base64.b64decode(profile_info_base64).decode())
                 self.profile_data = profile_data
                 
-                self.l_baseSize.setText(f"{profile_data.get('machine_width_value')} x {profile_data.get('machine_height_value')} x {profile_data.get('machine_depth_value')}mm")
+                self.l_baseSize.setText(f"{profile_data.get('machine_width_value')} x {profile_data.get('machine_depth_value')} x {profile_data.get('machine_height_value')}mm")
                 self.l_machineName.setText(f"{profile_data.get('machine_name_value')}")
 
                 self.l_filamentAmount.setText(f"{self.round_value(profile_data.get('filament_amount'))}m")
@@ -170,8 +174,42 @@ class gcode_info(QMainWindow):
 
 
     def saveInfo(self):
-        with open(f"{self.selected_file}_raw.txt", "w") as f:
-            pprint(self.profile_data, f)
+        skipped_items = ['generated_on', 'filament_amount', 'filament_weight', 'job_name']
+        items = []
+                
+        for item in self.profile_data:
+            items.append(item.replace('_unit', '').replace('_value', ''))
+        
+        items = sorted(set(items))
+        longest_item = len(max(items, key = len)) + 12
+
+        with open(f"{self.selected_file[:-6]}_raw.txt", "w", encoding = 'utf-8') as f:
+            f.write("#AMM_FILE START\n")
+            f.write(f'Profile report for file "{self.selected_file}".\n')
+            f.write('-----------------------------------------------------------------------------\n')
+            
+            for item in items:
+                if item not in skipped_items:
+                    value = self.profile_data.get(str(item) + '_value')
+                    unit =  self.profile_data.get(str(item) + '_unit')
+                    f.write(f"{item.capitalize().ljust(longest_item)}: {value} {unit}\n")
+                
+                else:
+                    if item != 'generated_on':
+                        value = self.profile_data.get(str(item))
+                        unit = self.profile_data.get(str(item) + '_unit')
+                        
+                        if unit is not None:
+                            f.write(f"{item.capitalize().ljust(longest_item)}: {value} {unit}\n")
+                        else:
+                            f.write(f"{item.capitalize().ljust(longest_item)}: {value}\n")
+
+                    else:
+                        value = self.profile_data.get(str(item))
+                        f.write(f"{item.capitalize().ljust(longest_item)}: {self.format_timedate(value)}\n")
+
+            f.write('-----------------------------------------------------------------------------\n')
+            f.write("#AMM_FILE EOF")
 
     @staticmethod
     def round_value(in_value):
@@ -206,62 +244,6 @@ class gcode_info(QMainWindow):
     @staticmethod
     def format_timedate(timestamp):
         return str(datetime.fromtimestamp(timestamp).strftime("%d. %m. %Y. %H:%M"))
-
-
-    @staticmethod
-    def format_datetime_pretty(timestamp, exact = False):
-        t = datetime.fromtimestamp(timestamp)
-        seconds = datetime.strftime(t, "%s")
-        #seconds = time.mktime(t.timetuple())
-        year = int(math.floor(seconds / 31556926))
-        remainder = seconds % 31556926
-
-        days = int(math.floor(remainder / 86400))
-        remainder = seconds % 86400
-
-        hours = int(math.floor(remainder / 3600))
-        remainder = seconds % 3600
-
-        minutes = int(math.floor(remainder / 60))
-        seconds = int(math.floor(remainder % 60))
-
-        if exact is True:
-            if year == 0 and days == 0 and hours == 0:
-                return "00:{0:02d}:{1:02d}".format(minutes, seconds)
-            elif year == 0 and days == 0:
-                return "{0:02d}:{1:02d}:{2:02d}".format(hours, minutes, seconds)
-            elif year == 0:
-                return "{0}d {1:02d}:{2:02d}:{3:02d}".format(days, hours, minutes, seconds)
-            else:
-                return "{0}y {1}d {2:02d}:{3:02d}:{4:02d}".format(
-                    year, days, hours, minutes, seconds)
-        else:
-            if year == 0 and days == 0 and hours == 0 and minutes == 0 and seconds < 10:
-                return "Prije par sekundi"
-            elif year == 0 and days == 0 and hours == 0 and minutes == 0 and seconds < 30:
-                return "Prije pola minute"
-            elif year == 0 and days == 0 and hours == 0 and minutes < 1:
-                return "Prije minut"
-            elif year == 0 and days == 0 and hours == 0 and minutes < 5:
-                return "Prije par minuta"
-            elif year == 0 and days == 0 and hours == 0 and minutes < 10:
-                return "Prije manje od deset minuta"
-            elif year == 0 and days == 0 and hours == 0 and minutes < 30:
-                return "Prije manje od pola sata"
-            elif year == 0 and days == 0 and hours == 0 and minutes < 40:
-                return "Prije pola sata"
-            elif year == 0 and days == 0 and hours < 1:
-                return "Prije sat"
-            elif year == 0 and days == 0 and hours < 2:
-                return "Prije dva sata"
-            elif year == 0 and days == 0 and hours < 12:
-                return "Prije pola dana"
-            elif year == 0 and days == 0:
-                return "u {0}:{1}".format(hours, minutes)
-            elif year == 0:
-                return "prije {0}d {1:02d}:{2:02d}".format(days, hours, minutes)
-            else:
-                return "prije {0}g {1}d {2:02d}:{3:02d}".format(year, days, hours, minutes)
 
 
 if __name__ == '__main__':
