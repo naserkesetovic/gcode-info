@@ -19,13 +19,18 @@ from UM.Qt.Duration import DurationFormat
 from cura.Snapshot import Snapshot
 from cura.CuraApplication import CuraApplication
 from cura.Settings.ExtruderManager import ExtruderManager
+from cura.CuraVersion import CuraVersion
 
 from PyQt5.QtCore import QByteArray, QIODevice, QBuffer
+
+
 
 from ..Script import Script
 
 line_size = 78
 
+
+# these are the values that are embeded readable in the gcode file.
 values_to_obtain_general = [
     'layer_height',
     'line_width',
@@ -37,6 +42,8 @@ values_to_obtain_general = [
     'adhesion_type'
     ]
 
+
+# these are the values to be obtained and encoded inside the base64
 values_to_obtain = [
     # general machine info
     'machine_name',
@@ -117,16 +124,9 @@ class AMM(Script):
         Quality: extruders[0].quality.getMetaData().get('name', '')
         '''
 
-    def _getPropertyValue(self, property_name):
-        return self.global_stack.getProperty(property_name, 'value')
-
-
-    def _getPropertyName(self, property_name):
-        return self.global_stack.getProperty(property_name, 'name')
-
-
-    def _getPropertyUnit(self, property_name):
-        return str(self.global_stack.getProperty(property_name, 'unit'))
+    def _getProperty(self, property_name, property_description = 'value'):
+        Logger.log("d", f"Getting the property {property_name}")
+        return str(self.global_stack.getProperty(property_name, property_description))
 
 
     def _createSnapshot(self, width, height):
@@ -171,20 +171,28 @@ class AMM(Script):
         data = {}
 
         for value in values_to_obtain:
-            #data[f'{value}_name'] = self._getPropertyName(value)
-            data[f'{value}_value'] = self._getPropertyValue(value)
-            data[f'{value}_unit'] = self._getPropertyUnit(value)
+            data[f'{value}_value'] = self._getProperty(value, 'value')
+            data[f'{value}_unit'] = self._getProperty(value, 'unit')
 
         data['print_time'] = self.application.getPrintInformation().currentPrintTime.getDisplayString(DurationFormat.Format.Seconds)
         data['print_time_unit'] = "s"
         data['job_name'] = self.application.getPrintInformation().jobName
-        data['filament_amount'] = self.application.getPrintInformation().materialLengths[0]
+        data['filament_amount'] = self._checkFloatAndRound(self.application.getPrintInformation().materialLengths[0])
         data['filament_amount_unit'] = "m"
-        data['filament_weight'] = self.application.getPrintInformation().materialWeights[0]
+        data['filament_weight'] = self._checkFloatAndRound(self.application.getPrintInformation().materialWeights[0])
         data['filament_weight_unit'] = "gr"
+        data['cura_version'] = CuraVersion
         data['generated_on'] = time.time()
 
         return data
+
+
+    def _checkFloatAndRound(self, value, rounding_amount = 2):
+        try:
+            fixed = round(float(value), rounding_amount)
+            return fixed
+        except:
+            return value
 
 
     def _getProfileValuesInReadableFormat(self):
@@ -192,12 +200,13 @@ class AMM(Script):
         longest_len = len(max(values_to_obtain_general, key = len)) + 6
         data.append("; AMM_SHORT_PROFILE BEGIN")
         for value in values_to_obtain_general:
-            data.append(f"; {value.replace('_', ' ').capitalize().ljust(longest_len)}: {self._getPropertyValue(value)} {self._getPropertyUnit(value)}")
+            data.append(f"; {value.replace('_', ' ').capitalize().ljust(longest_len)}: {self._getProperty(value, 'value')} {self._getProperty(value, 'unit')}")
 
-        data.append(f"; {'Print time:'.ljust(longest_len)}: {self._getPrintTime(str(self.application.getPrintInformation().currentPrintTime.getDisplayString(DurationFormat.Format.Seconds)))} s")
-        data.append(f"; {'Filament amount:'.ljust(longest_len)}: {self.application.getPrintInformation().materialLengths[0]} m")
-        data.append(f"; {'Filament weight:'.ljust(longest_len)}: {self.application.getPrintInformation().materialWeights[0]} gr")
-        data.append(f"; {'Generated on:'.ljust(longest_len)}: {time.strftime('%d. %m. %Y. - %H:%M', time.localtime(time.time()))}")
+        data.append(f"; {'Cura version'.ljust(longest_len)}: {CuraVersion}")
+        data.append(f"; {'Print time'.ljust(longest_len)}: {self._getPrintTime(str(self.application.getPrintInformation().currentPrintTime.getDisplayString(DurationFormat.Format.Seconds)))} s")
+        data.append(f"; {'Filament amount'.ljust(longest_len)}: {self.application.getPrintInformation().materialLengths[0]} m")
+        data.append(f"; {'Filament weight'.ljust(longest_len)}: {self.application.getPrintInformation().materialWeights[0]} gr")
+        data.append(f"; {'Generated on'.ljust(longest_len)}: {time.strftime('%d. %m. %Y. - %H:%M', time.localtime(time.time()))}")
         data.append("; AMM_SHORT_PROFILE END")
         
         return data
