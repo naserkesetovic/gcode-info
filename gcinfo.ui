@@ -10,7 +10,7 @@
     <x>0</x>
     <y>0</y>
     <width>312</width>
-    <height>711</height>
+    <height>682</height>
    </rect>
   </property>
   <property name="sizePolicy">
@@ -30,9 +30,9 @@
     <property name="geometry">
      <rect>
       <x>10</x>
-      <y>600</y>
+      <y>580</y>
       <width>291</width>
-      <height>101</height>
+      <height>91</height>
      </rect>
     </property>
     <property name="font">
@@ -153,9 +153,9 @@
     <property name="geometry">
      <rect>
       <x>10</x>
-      <y>160</y>
+      <y>150</y>
       <width>291</width>
-      <height>261</height>
+      <height>251</height>
      </rect>
     </property>
     <property name="title">
@@ -1123,7 +1123,7 @@
       <x>10</x>
       <y>10</y>
       <width>291</width>
-      <height>141</height>
+      <height>131</height>
      </rect>
     </property>
     <property name="title">
@@ -1281,10 +1281,10 @@
    <widget class="QGroupBox" name="gThumbnail">
     <property name="geometry">
      <rect>
-      <x>10</x>
-      <y>430</y>
-      <width>290</width>
-      <height>160</height>
+      <x>9</x>
+      <y>409</y>
+      <width>291</width>
+      <height>161</height>
      </rect>
     </property>
     <property name="title">
